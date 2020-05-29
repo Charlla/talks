@@ -1,0 +1,125 @@
+====================================
+->> MANUAL STEP: Using the UI
+Click on Streams and select add new.
+Select the DEPOSITS topic.
+Set the encoding to JSON
+Set the Key to USERNAME
+Click save.
+
+====================================
+->> MANUAL STEP: Using the UI
+Click on Streams and select add new.
+Select the WAGERS topic.
+Set the encoding to JSON
+Set the Key to USERNAME
+Click save.
+
+====================================
+
+CREATE TABLE T_STATS_DEPOSITS AS 
+SELECT 
+type
+, COUNT(*) COUNT_DEPOSITS
+, SUM(DEPOSIT_AMOUNT) SUM_DEPOSIT_AMOUNT
+FROM  DEPOSITS 
+GROUP BY type
+EMIT CHANGES;
+
+
+==========================================================================
+
+CREATE TABLE T_STATS_DEPOSITS_WIN_10S AS 
+SELECT 
+type
+, COUNT(*) COUNT_DEPOSITS
+, SUM(DEPOSIT_AMOUNT) SUM_DEPOSIT_AMOUNT
+FROM  DEPOSITS 
+WINDOW TUMBLING (SIZE 10 SECONDS)
+GROUP BY type
+EMIT CHANGES;
+
+==========================================================================
+
+CREATE TABLE T_STATS_WAGERS AS
+  SELECT type,
+         COUNT(*) COUNT_WAGERS,
+         SUM( BET_AMOUNT) SUM_BET_AMOUNT,
+         SUM( WIN_AMOUNT) SUM_WIN_AMOUNT,
+         AVG( BET_AMOUNT) AVG_BET_AMOUNT,
+         AVG( WIN_AMOUNT) AVG_WIN_AMOUNT,
+         MIN( BET_AMOUNT) MIN_BET_AMOUNT,
+         MIN( WIN_AMOUNT) MIN_WIN_AMOUNT,
+         MAX( BET_AMOUNT) MAX_BET_AMOUNT,
+         MAX( WIN_AMOUNT) MAX_WIN_AMOUNT,
+         MIN( START_BALANCE_AMOUNT) MIN_START_BALANCE_AMOUNT,
+         MIN( END_BALANCE_AMOUNT) MIN_END_BALANCE_AMOUNT,
+         MAX( START_BALANCE_AMOUNT) MAX_START_BALANCE_AMOUNT,
+         MAX( END_BALANCE_AMOUNT) MAX_END_BALANCE_AMOUNT
+  FROM  WAGERS 
+  GROUP BY type
+  EMIT CHANGES;
+
+
+==========================================================================
+
+
+CREATE TABLE T_STATS_WAGERS_WIN_10S AS
+  SELECT type,
+         COUNT(*) COUNT_WAGERS,
+         SUM( BET_AMOUNT) SUM_BET_AMOUNT,
+         SUM( WIN_AMOUNT) SUM_WIN_AMOUNT,
+         AVG( BET_AMOUNT) AVG_BET_AMOUNT,
+         AVG( WIN_AMOUNT) AVG_WIN_AMOUNT,
+         MIN( BET_AMOUNT) MIN_BET_AMOUNT,
+         MIN( WIN_AMOUNT) MIN_WIN_AMOUNT,
+         MAX( BET_AMOUNT) MAX_BET_AMOUNT,
+         MAX( WIN_AMOUNT) MAX_WIN_AMOUNT,
+         MIN( START_BALANCE_AMOUNT) MIN_START_BALANCE_AMOUNT,
+         MIN( END_BALANCE_AMOUNT) MIN_END_BALANCE_AMOUNT,
+         MAX( START_BALANCE_AMOUNT) MAX_START_BALANCE_AMOUNT,
+         MAX( END_BALANCE_AMOUNT) MAX_END_BALANCE_AMOUNT
+  FROM  WAGERS WINDOW TUMBLING (SIZE 10 SECONDS)
+  GROUP BY type
+  EMIT CHANGES;
+
+
+============================================
+
+CREATE STREAM S_SUSPECT_WAGERS AS SELECT 
+*
+FROM  WAGERS 
+WHERE START_BALANCE_AMOUNT <= 0 EMIT CHANGES;
+
+===========================================
+
+CREATE STREAM S_SUSPECT_WAGERS_BETAMOUNT WITH (KAFKA_TOPIC='S_SUSPECT_WAGERS_BETAMOUNT', PARTITIONS=1, REPLICAS=1) AS SELECT *
+FROM WAGERS WAGERS
+WHERE (WAGERS.BET_AMOUNT = 314.159)
+EMIT CHANGES;
+
+
+====================================
+->> MANUAL STEP: Using the UI
+Click on Tables and select add new.
+Select the S_SUSPECT_WAGERS_BETAMOUNT stream.
+Change the name to T_SUSPECT_USERS
+Set the encoding to JSON
+Set the Key to USERNAME
+Delete all properties except USERNAME.
+Click save.
+
+====================================
+
+CREATE STREAM S_SUSPECT_BIGWINS AS SELECT 
+W.USERNAME
+,W.BET_AMOUNT
+,W.WIN_AMOUNT
+,W.START_BALANCE_AMOUNT
+,W.END_BALANCE_AMOUNT
+FROM  WAGERS AS W
+LEFT JOIN  T_SUSPECT_USERS AS U
+ON W.ROWKEY = U.USERNAME
+WHERE U.USERNAME <> ''
+AND W.WIN_AMOUNT >= 1000
+EMIT CHANGES;
+
